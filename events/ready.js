@@ -1,8 +1,8 @@
 module.exports = client => {
     client.user.setPresence({
         activity: {
-            name: 'dont force discon me or i will crash'
+            name: 'with ICBM'
         }
     });
-    console.log('Ready!');
+    console.log(`Ready!`);
 };

@@ -1,8 +1,9 @@
 require("dotenv").config()
 const Discord = require('discord.js');
-const { prefix } = require('./config.json');
+const prefix = process.env.PREFIX;
 const fs = require("fs");
 const ytdl = require('ytdl-core');
+const embed = new Discord.MessageEmbed()
 
 const client = new Discord.Client();
 const queue = new Map();
@@ -15,29 +16,53 @@ fs.readdir("./events/", (err, files) => {
   })
 })
 
-client.on("message", async message => {
-  if (message.author.bot) return;
-  if (!message.content.startsWith(prefix)) return;
+const help = require("./commands/help");
+const hellobot = require("./commands/hellobot");
 
+const skip = require("./commands/skip");
+const stop = require("./commands/stop");
+const nowPlaying = require("./commands/nowPlaying");
+const playQueue = require("./commands/queue");
+
+var amountSong = 0;
+
+client.on("message", async message => {
   const serverQueue = queue.get(message.guild.id);
 
-  if (message.content.startsWith(`${prefix}hellobot`)) {
-    const hello = require("./commands/message")
-    return hello(message);
-  } else if (message.content.startsWith(`${prefix}play`)) {
+  if (message.author.bot) return;
+  
+  if (message.content === "<@!" + client.user.id + ">") {
+    help(client, message, embed);
+  }
+
+  if (!message.content.startsWith(prefix)) return;
+  
+  if (message.content === `${prefix}help`) {
+    help(client, message, embed);
+    return;
+  } else if (message.content === `${prefix}hellobot`) {
+    hellobot(client, message, embed);
+    return;
+  } else if (message.content.startsWith(`${prefix}play`) || message.content.startsWith(`${prefix}p`)) {
     execute(message, serverQueue);
     return;
-  } else if (message.content.startsWith(`${prefix}skip`)) {
-    skip(message, serverQueue);
+  } else if (message.content === `${prefix}skip` || message.content === `${prefix}s`) {
+    skip(client, message, serverQueue, embed);
     return;
-  } else if (message.content.startsWith(`${prefix}disconnect`)) {
-    stop(message, serverQueue);
+  } else if (message.content === `${prefix}disconnect` || message.content === `${prefix}dc`) {
+    stop(client, message, serverQueue, embed);
     return;
-  } else if (message.content.startsWith(`${prefix}dc`)) {
-    stop(message, serverQueue);
+  } else if (message.content === `${prefix}nowplaying` || message.content === `${prefix}np`) {
+    nowPlaying(client, message, serverQueue, embed);
+    return;
+  } else if (message.content === `${prefix}queue` || message.content === `${prefix}q`) {
+    playQueue(client, message, serverQueue, amountSong, embed);
     return;
   } else {
-    message.channel.send("You need to enter a valid command!");
+    embed.setAuthor(client.user.username, client.user.avatarURL());
+    embed.setColor('#f1c40f');
+    embed.setDescription(`You need to enter a valid command!`);
+    message.channel.send(embed);
   }
 });
 
@@ -45,15 +70,18 @@ async function execute(message, serverQueue) {
   const args = message.content.split(" ");
 
   const voiceChannel = message.member.voice.channel;
-  if (!voiceChannel)
-    return message.channel.send(
-      "You need to be in a voice channel to play music!"
-    );
+  if (!voiceChannel) {
+    embed.setAuthor(client.user.username, client.user.avatarURL());
+    embed.setColor('#f1c40f');
+    embed.setDescription(`You need to be in a voice channel to play music!`);
+    return message.channel.send(embed);
+  }
   const permissions = voiceChannel.permissionsFor(message.client.user);
   if (!permissions.has("CONNECT") || !permissions.has("SPEAK")) {
-    return message.channel.send(
-      "I need the permissions to join and speak in your voice channel!"
-    );
+    embed.setAuthor(client.user.username, client.user.avatarURL());
+    embed.setColor('#f1c40f');
+    embed.setDescription(`I need the permissions to join and speak in your voice channel!`);
+    return message.channel.send(embed);
   }
 
   const songInfo = await ytdl.getInfo(args[1]);
@@ -79,6 +107,9 @@ async function execute(message, serverQueue) {
     try {
       var connection = await voiceChannel.join();
       queueContruct.connection = connection;
+
+      amountSong = amountSong + 1;
+
       play(message.guild, queueContruct.songs[0]);
     } catch (err) {
       console.log(err);
@@ -87,27 +118,12 @@ async function execute(message, serverQueue) {
     }
   } else {
     serverQueue.songs.push(song);
-    return message.channel.send(`**${song.title}** has been added to the queue!`);
+
+    amountSong = amountSong + 1;
+
+    embed.setDescription(`**${song.title}** has been added to the queue`);
+    return message.channel.send(embed);
   }
-}
-
-function skip(message, serverQueue) {
-  if (!message.member.voice.channel)
-    return message.channel.send(
-      "You have to be in a voice channel to stop the music!"
-    );
-  if (!serverQueue)
-    return message.channel.send("There is no song that I could skip!");
-  serverQueue.connection.dispatcher.end();
-}
-
-function stop(message, serverQueue) {
-  if (!message.member.voice.channel)
-    return message.channel.send(
-      "You have to be in a voice channel to stop the music!"
-    );
-  serverQueue.songs = [];
-  serverQueue.connection.dispatcher.end();
 }
 
 function play(guild, song) {
@@ -115,7 +131,8 @@ function play(guild, song) {
   if (!song) {
     serverQueue.voiceChannel.leave();
     queue.delete(guild.id);
-    return;
+    embed.setDescription(`Disconnected`);
+    return serverQueue.textChannel.send(embed);
   }
 
   const dispatcher = serverQueue.connection
@@ -126,7 +143,12 @@ function play(guild, song) {
     })
     .on("error", error => console.error(error));
   dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
-  serverQueue.textChannel.send(`Start playing: **${song.title}**`);
+  amountSong = amountSong - 1;
+
+  embed.setAuthor(client.user.username, client.user.avatarURL());
+  embed.setColor('#f1c40f');
+  embed.setDescription(`Start playing: **${song.title}**`);
+  serverQueue.textChannel.send(embed);
 }
 
 client.login(process.env.BOT_TOKEN);

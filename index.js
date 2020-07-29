@@ -23,6 +23,7 @@ const skip = require("./commands/skip");
 const stop = require("./commands/stop");
 const nowPlaying = require("./commands/nowPlaying");
 const playQueue = require("./commands/queue");
+const reset = require("./commands/reset");
 
 var amountSong = 0;
 
@@ -58,7 +59,13 @@ client.on("message", async message => {
   } else if (message.content === `${prefix}queue` || message.content === `${prefix}q`) {
     playQueue(client, message, serverQueue, amountSong, embed);
     return;
-  } else {
+  } 
+  else if (message.content === `${prefix}reset`)
+  {
+    reset(client, message, queue, embed);
+    return;
+  } 
+  else {
     embed.setAuthor(client.user.username, client.user.avatarURL());
     embed.setColor('#f1c40f');
     embed.setDescription(`You need to enter a valid command!`);

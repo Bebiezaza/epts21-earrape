@@ -24,7 +24,7 @@ const stop = require("./commands/stop");
 const nowPlaying = require("./commands/nowPlaying");
 const playQueue = require("./commands/queue");
 const reset = require("./commands/reset");
-const remove = require("./commands/music/remove");
+const remove = require("./commands/remove");
 
 var amountSong = 0;
 

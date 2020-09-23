@@ -1,7 +1,7 @@
 module.exports = client => {
     client.user.setPresence({
         activity: {
-            name: 'with ICBM'
+            name: 'with 1.2.3_04\'s ICBM (Alpha)'
         }
     });
     console.log(`Ready!`);

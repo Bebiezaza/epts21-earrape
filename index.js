@@ -24,6 +24,7 @@ const stop = require("./commands/stop");
 const nowPlaying = require("./commands/nowPlaying");
 const playQueue = require("./commands/queue");
 const reset = require("./commands/reset");
+const remove = require("./commands/music/remove");
 
 var amountSong = 0;
 
@@ -63,6 +64,12 @@ client.on("message", async message => {
   else if (message.content === `${prefix}reset`)
   {
     reset(client, message, queue, embed);
+    return;
+  } 
+  else if (message.content.startsWith(`${prefix}remove`))
+  {
+    const args = message.content.split(" ");
+    remove(client, message, serverQueue, args[1], embed)
     return;
   } 
   else {
